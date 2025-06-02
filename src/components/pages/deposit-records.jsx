@@ -42,9 +42,7 @@ export default function DepositRecordsPage() {
 
   const getMonetaryFunds = async () => {
     try {
-      const response = await axios.get(
-        `${urlApi}/g/monetary-funds`
-      );
+      const response = await axios.get(`${urlApi}/g/monetary-funds`);
       setMonetaryFunds(response.data);
     } catch (error) {
       console.error("Error fetching monetary funds:", error);
@@ -53,9 +51,7 @@ export default function DepositRecordsPage() {
 
   const getDeposits = async () => {
     try {
-      const response = await axios.get(
-        `${urlApi}/g/deposit-records`
-      );
+      const response = await axios.get(`${urlApi}/g/deposit-records`);
       setDeposits(response.data);
     } catch (error) {
       console.error("Error fetching deposits:", error);
@@ -104,16 +100,14 @@ export default function DepositRecordsPage() {
       return;
 
     toast.promise(
-      axios
-        .delete(`http://localhost:3000/server/v1/d/deposit-records/${id}`)
-        .then((response) => {
-          if (response.status === 200) {
-            getDeposits();
-            return "Se elimino con éxito";
-          } else {
-            throw new Error("Error al eliminar: " + response.data.message);
-          }
-        }),
+      axios.delete(`${urlApi}/d/deposit-records/${id}`).then((response) => {
+        if (response.status === 200) {
+          getDeposits();
+          return "Se elimino con éxito";
+        } else {
+          throw new Error("Error al eliminar: " + response.data.message);
+        }
+      }),
       {
         loading: "Eliminando datos...",
         success: (msg) => msg,

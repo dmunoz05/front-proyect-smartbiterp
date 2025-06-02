@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
+import AppContext from "@context/app-context";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,6 +23,9 @@ import { Search } from "lucide-react";
 import axios from "axios";
 
 export default function MovementReportsPage() {
+  const context = useContext(AppContext);
+  const urlApi = context.urlApi;
+
   const [dateRange, setDateRange] = useState({
     startDate: "",
     endDate: "",
@@ -38,12 +42,9 @@ export default function MovementReportsPage() {
         params.startDate = { startDate: dateRange.startDate };
       if (dateRange.endDate) params.endDate = { startDate: dateRange.endDate };
 
-      const response = await axios.get(
-        "http://localhost:3000/server/v1/g/movement-reports",
-        {
-          params,
-        }
-      );
+      const response = await axios.get(`${urlApi}/g/movement-reports`, {
+        params,
+      });
       setMovements(response.data);
     } catch (error) {
       console.error("Error fetching movement reports:", error);
