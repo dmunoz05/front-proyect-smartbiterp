@@ -19,7 +19,7 @@ const AppProvider = ({ children }) => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("user");
     setIsAuthenticated(false);
-    navigate("/login");
+    navigate("/welcome");
     toast.success("Sesión cerrada correctamente.");
   }
 
