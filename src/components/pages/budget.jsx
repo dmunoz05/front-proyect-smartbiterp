@@ -97,7 +97,7 @@ export default function BudgetPage() {
           Monto: parseFloat(formData.amount),
         })
         .then((response) => {
-          if (response.status === 200) {
+          if (response.status === 201) {
             setFormData({ month: "", expenseTypeID: "", amount: "" });
             fetchBudgets();
             return "Creado con éxito";
@@ -205,7 +205,7 @@ export default function BudgetPage() {
                       amount: e.target.value,
                     }))
                   }
-                  placeholder="0.00"
+                  placeholder="0"
                   required
                 />
               </div>
@@ -241,7 +241,7 @@ export default function BudgetPage() {
                   <TableCell>{getMonthLabel(budget.Mes)}</TableCell>
                   <TableCell>{budget.Nombre}</TableCell>
                   <TableCell className="text-right font-mono">
-                    ${budget.Monto.toFixed(2)}
+                    ${Intl.NumberFormat("es-CO").format(budget.Monto)}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">

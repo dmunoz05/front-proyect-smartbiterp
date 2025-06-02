@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,131 +27,262 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus, Save, Trash2, AlertTriangle } from "lucide-react";
+import axios from "axios";
+import { toast } from "sonner";
 
 export default function ExpenseRecordsPage() {
-  const [records, setRecords] = useState([]);
   const [currentRecord, setCurrentRecord] = useState({
-    date: "",
+    date: new Date().toISOString().split("T")[0],
     monetaryFund: "",
-    comments: "",
     storeName: "",
     documentType: "",
+    comments: "",
   });
+
   const [details, setDetails] = useState([]);
-  const [budgetAlert, setBudgetAlert] = useState(null);
+  const [records, setRecords] = useState([]);
+  const [budgetAlert, setBudgetAlert] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const monetaryFunds = [
-    "Main Checking Account",
-    "Savings Account",
-    "Cash Wallet",
-  ];
-  const documentTypes = ["Receipt", "Invoice", "Other"];
-  const expenseTypes = [
-    "Food & Dining",
-    "Transportation",
-    "Entertainment",
-    "Utilities",
-    "Healthcare",
-  ];
+  const [monetaryFunds, setMonetaryFunds] = useState([]);
+  const [expenseTypes, setExpenseTypes] = useState([]);
 
-  // Mock budget data
-  const budgets = {
-    "Food & Dining": 500,
-    Transportation: 300,
-    Entertainment: 200,
-    Utilities: 400,
-    Healthcare: 250,
+  const documentTypes = ["Comprobante", "Factura", "Otro"];
+
+  const fetchMonetaryFunds = async () => {
+    try {
+      const response = await axios.get(
+        "http://localhost:3000/server/v1/g/monetary-funds"
+      );
+      setMonetaryFunds(response.data);
+    } catch (error) {
+      console.error("Error loading monetary funds:", error);
+    }
+  };
+
+  const fetchExpenseTypes = async () => {
+    try {
+      const response = await axios.get(
+        "http://localhost:3000/server/v1/g/expense-types"
+      );
+      setExpenseTypes(response.data);
+    } catch (error) {
+      console.error("Error loading expense types:", error);
+    }
+  };
+
+  const fetchExpenseRecords = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(
+        "http://localhost:3000/server/v1/g/expense-records"
+      );
+
+      const recordsWithDetails = await Promise.all(
+        response.data.map(async (record) => {
+          try {
+            const detailsResponse = await axios.get(
+              "http://localhost:3000/server/v1/g/expense-records-details"
+            );
+            const recordDetails = detailsResponse.data.filter(
+              (detail) => detail.GastoID === record.GastoID
+            );
+            return {
+              ...record,
+              details: recordDetails.map((detail) => ({
+                id: detail.DetalleID,
+                expenseTypeId: detail.TipoGastoID,
+                expenseTypeName:
+                  expenseTypes.find(
+                    (type) => type.TipoGastoID === detail.TipoGastoID
+                  )?.Nombre || "N/A",
+                amount: detail.Monto,
+              })),
+            };
+          } catch (error) {
+            console.error(
+              "Error loading details for record:",
+              record.GastoID,
+              error
+            );
+            return { ...record, details: [] };
+          }
+        })
+      );
+
+      setRecords(recordsWithDetails);
+    } catch (error) {
+      console.error("Error loading expense records:", error);
+      setError("Error al cargar los registros de gastos");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const addDetail = () => {
     const newDetail = {
-      id: Date.now().toString(),
-      expenseType: "",
+      id: Date.now(),
+      expenseTypeId: "",
       amount: 0,
     };
-    setDetails((prev) => [...prev, newDetail]);
+    setDetails([...details, newDetail]);
   };
 
   const updateDetail = (id, field, value) => {
-    setDetails((prev) =>
-      prev.map((detail) =>
+    setDetails(
+      details.map((detail) =>
         detail.id === id ? { ...detail, [field]: value } : detail
       )
     );
   };
 
   const removeDetail = (id) => {
-    setDetails((prev) => prev.filter((detail) => detail.id !== id));
-  };
-
-  const checkBudget = () => {
-    const expensesByType = {};
-
-    details.forEach((detail) => {
-      if (detail.expenseType && detail.amount > 0) {
-        expensesByType[detail.expenseType] =
-          (expensesByType[detail.expenseType] || 0) + detail.amount;
-      }
-    });
-
-    const overBudgetTypes = [];
-    Object.entries(expensesByType).forEach(([type, amount]) => {
-      const budget = budgets[type];
-      if (budget && amount > budget) {
-        overBudgetTypes.push(
-          `${type}: $${amount.toFixed(2)} exceeds budget of $${budget.toFixed(
-            2
-          )}`
-        );
-      }
-    });
-
-    if (overBudgetTypes.length > 0) {
-      setBudgetAlert(`Budget exceeded for: ${overBudgetTypes.join(", ")}`);
-      return false;
-    }
-
-    setBudgetAlert(null);
-    return true;
-  };
-
-  const handleSave = () => {
-    if (
-      !currentRecord.date ||
-      !currentRecord.monetaryFund ||
-      details.length === 0
-    ) {
-      alert(
-        "Please fill in all required fields and add at least one expense detail."
-      );
-      return;
-    }
-
-    checkBudget();
-
-    const newRecord = {
-      id: Date.now().toString(),
-      ...currentRecord,
-      details: [...details],
-    };
-
-    setRecords((prev) => [...prev, newRecord]);
-    setCurrentRecord({
-      date: "",
-      monetaryFund: "",
-      comments: "",
-      storeName: "",
-      documentType: "",
-    });
-    setDetails([]);
+    setDetails(details.filter((detail) => detail.id !== id));
   };
 
   const getTotalAmount = () => {
     return details.reduce((sum, detail) => sum + (detail.amount || 0), 0);
   };
 
+  const handleSave = async () => {
+    if (!currentRecord.date || !currentRecord.monetaryFund) {
+      setError("Fecha y Fondo Monetario son campos obligatorios");
+      return;
+    }
+
+    if (details.length === 0) {
+      setError("Debe agregar al menos un detalle de gasto");
+      return;
+    }
+
+    const invalidDetails = details.filter(
+      (detail) => !detail.expenseTypeId || detail.amount <= 0
+    );
+
+    if (invalidDetails.length > 0) {
+      setError("Todos los detalles deben tener tipo de gasto y monto válido");
+      return;
+    }
+
+    setError("");
+
+    const headerData = {
+      Fecha: currentRecord.date,
+      FondoID: currentRecord.monetaryFund,
+      Observaciones: currentRecord.comments || null,
+      Comercio: currentRecord.storeName || null,
+      TipoDocumento: currentRecord.documentType || null,
+      UsuarioID: 1,
+    };
+
+    toast.promise(
+      axios
+        .post("http://localhost:3000/server/v1/i/expense-records", headerData)
+        .then(async (response) => {
+          if (response.status === 201) {
+            const gastoID = response.data.gastoID;
+
+            const detailPromises = details.map((detail) => {
+              const detailData = {
+                GastoID: gastoID,
+                TipoGastoID: detail.expenseTypeId,
+                Monto: detail.amount,
+              };
+
+              return toast.promise(
+                axios
+                  .post(
+                    "http://localhost:3000/server/v1/i/expense-records-details",
+                    detailData
+                  )
+                  .then((detailResponse) => {
+                    if (detailResponse.status === 201) {
+                      return "Detalle creado correctamente";
+                    } else {
+                      throw new Error(
+                        "Error al crear detalle: " + detailResponse.data.message
+                      );
+                    }
+                  }),
+                {
+                  loading: "Guardando detalle...",
+                  success: (msg) => msg,
+                  error: (err) => err.message || "Error al guardar detalle",
+                }
+              );
+            });
+
+            await Promise.all(detailPromises);
+
+            setCurrentRecord({
+              date: new Date().toISOString().split("T")[0],
+              monetaryFund: "",
+              storeName: "",
+              documentType: "",
+              comments: "",
+            });
+            setDetails([]);
+            setBudgetAlert("");
+
+            await fetchExpenseRecords();
+
+            return "Registro de gastos guardado correctamente";
+          } else {
+            throw new Error(
+              "Error al crear registro: " + response.data.message
+            );
+          }
+        }),
+      {
+        loading: "Guardando registro de gastos...",
+        success: (msg) => msg,
+        error: (err) => {
+          setError(err.message || "Error al guardar el registro de gastos");
+          return err.message || "Error en la solicitud";
+        },
+      }
+    );
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("¿Seguro que quieres eliminar este tipo de gasto?"))
+      return;
+
+    toast.promise(
+      axios
+        .delete(`http://localhost:3000/server/v1/d/expense-records/${id}`)
+        .then((response) => {
+          if (response.status === 200) {
+            fetchExpenseRecords();
+            return "Se elimino con éxito";
+          } else {
+            throw new Error("Error al eliminar: " + response.data.message);
+          }
+        }),
+      {
+        loading: "Eliminando datos...",
+        success: (msg) => msg,
+        error: (err) => err.message || "Error en la solicitud",
+      }
+    );
+  };
+
+  useEffect(() => {
+    fetchExpenseRecords();
+    fetchMonetaryFunds();
+    fetchExpenseTypes();
+  }, []);
+
   return (
     <div className="space-y-6">
+      {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Nuevo registro de gastos</CardTitle>
@@ -175,6 +306,7 @@ export default function ExpenseRecordsPage() {
                   }))
                 }
                 required
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -184,14 +316,18 @@ export default function ExpenseRecordsPage() {
                 onValueChange={(value) =>
                   setCurrentRecord((prev) => ({ ...prev, monetaryFund: value }))
                 }
+                disabled={loading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar fondo" />
                 </SelectTrigger>
                 <SelectContent>
                   {monetaryFunds.map((fund) => (
-                    <SelectItem key={fund} value={fund}>
-                      {fund}
+                    <SelectItem
+                      key={fund.FondoID}
+                      value={fund.FondoID.toString()}
+                    >
+                      {fund.Nombre}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -209,6 +345,7 @@ export default function ExpenseRecordsPage() {
                   }))
                 }
                 placeholder="Introduzca el nombre de la tienda"
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -218,6 +355,7 @@ export default function ExpenseRecordsPage() {
                 onValueChange={(value) =>
                   setCurrentRecord((prev) => ({ ...prev, documentType: value }))
                 }
+                disabled={loading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar el tipo de documento" />
@@ -244,6 +382,7 @@ export default function ExpenseRecordsPage() {
                 }
                 placeholder="Ingrese cualquier comentario adicional"
                 rows={3}
+                disabled={loading}
               />
             </div>
           </div>
@@ -252,7 +391,7 @@ export default function ExpenseRecordsPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Detalles de gastos</h3>
-              <Button onClick={addDetail} variant="outline">
+              <Button onClick={addDetail} variant="outline" disabled={loading}>
                 <Plus className="mr-2 h-4 w-4" />
                 Agregar detalles
               </Button>
@@ -272,18 +411,22 @@ export default function ExpenseRecordsPage() {
                     <TableRow key={detail.id}>
                       <TableCell>
                         <Select
-                          value={detail.expenseType}
+                          value={detail.expenseTypeId}
                           onValueChange={(value) =>
-                            updateDetail(detail.id, "expenseType", value)
+                            updateDetail(detail.id, "expenseTypeId", value)
                           }
+                          disabled={loading}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccione el tipo" />
                           </SelectTrigger>
                           <SelectContent>
                             {expenseTypes.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
+                              <SelectItem
+                                key={type.TipoGastoID}
+                                value={type.TipoGastoID.toString()}
+                              >
+                                {type.Nombre}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -301,7 +444,8 @@ export default function ExpenseRecordsPage() {
                               Number.parseFloat(e.target.value) || 0
                             )
                           }
-                          placeholder="0.00"
+                          placeholder="0"
+                          disabled={loading}
                         />
                       </TableCell>
                       <TableCell>
@@ -309,6 +453,7 @@ export default function ExpenseRecordsPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => removeDetail(detail.id)}
+                          disabled={loading}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -318,7 +463,7 @@ export default function ExpenseRecordsPage() {
                   <TableRow>
                     <TableCell className="font-semibold">Total</TableCell>
                     <TableCell className="font-semibold font-mono">
-                      ${getTotalAmount().toFixed(2)}
+                      ${Intl.NumberFormat("es-CO").format(getTotalAmount())}
                     </TableCell>
                     <TableCell></TableCell>
                   </TableRow>
@@ -334,7 +479,7 @@ export default function ExpenseRecordsPage() {
             </Alert>
           )}
 
-          <Button onClick={handleSave} className="w-full">
+          <Button onClick={handleSave} className="w-full" disabled={loading}>
             <Save className="mr-2 h-4 w-4" />
             Guardar registro de gastos
           </Button>
@@ -350,34 +495,51 @@ export default function ExpenseRecordsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {loading && <p>Cargando registros...</p>}
             <div className="space-y-4">
               {records.map((record) => (
-                <div key={record.id} className="border rounded-lg p-4">
+                <div key={record.GastoID} className="border rounded-lg p-4">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <p className="font-semibold">
-                        {record.storeName || "Expense Record"}
+                        {record.Comercio || "Expense Record"}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {record.date} • {record.monetaryFund}
+                        {new Date(record.Fecha).toISOString().slice(0, 10)}•{" "}
+                        {monetaryFunds.find(
+                          (fund) =>
+                            fund.FondoID.toString() ===
+                            record.FondoID.toString()
+                        )?.Nombre || record.FondoID}
                       </p>
                     </div>
                     <p className="font-mono font-semibold">
                       $
-                      {record.details
-                        .reduce((sum, detail) => sum + detail.amount, 0)
-                        .toFixed(2)}
+                      {record.details.reduce(
+                        (sum, detail) => sum + detail.amount,
+                        0
+                      )}
                     </p>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(record.GastoID)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  {record.comments && (
+                  {record.Observaciones && (
                     <p className="text-sm text-muted-foreground mb-2">
-                      {record.comments}
+                      {record.Observaciones}
                     </p>
                   )}
                   <div className="text-sm">
                     {record.details.map((detail, index) => (
                       <span key={detail.id}>
-                        {detail.expenseType}: ${detail.amount.toFixed(2)}
+                        {detail.expenseTypeName}: $
+                        {Intl.NumberFormat("es-CO").format(detail.amount)}
                         {index < record.details.length - 1 && " • "}
                       </span>
                     ))}

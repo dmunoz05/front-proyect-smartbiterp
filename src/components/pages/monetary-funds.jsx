@@ -159,7 +159,7 @@ export default function MonetaryFundsPage() {
   const getTypeLabel = (type) => {
     return type === "bank_account"
       ? "Cuenta bancaria"
-      : "Dinero para gastos menores";
+      : "Billetera";
   };
 
   const getTypeBadgeVariant = (type) => {

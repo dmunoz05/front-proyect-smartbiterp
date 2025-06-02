@@ -1,4 +1,6 @@
-import * as React from "react";
+import AppContext from "@context/app-context.jsx";
+import { useNavigate } from "react-router-dom";
+import { useState, useContext } from "react";
 import {
   Calculator,
   BarChartIcon as ChartBar,
@@ -35,7 +37,6 @@ import DepositRecordsPage from "./pages/deposit-records";
 import MovementReportsPage from "./pages/movement-reports";
 import BudgetComparisonPage from "./pages/budget-comparison";
 import DashboardPage from "./pages/dashboard";
-import LoginScreen from "./login-screen.jsx";
 
 const navigationData = {
   maintenance: [
@@ -82,12 +83,9 @@ const navigationData = {
 };
 
 export default function ExpenseTracker() {
-  const [activeView, setActiveView] = React.useState("dashboard");
-  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
-
-  const handleLogin = () => {
-    setIsAuthenticated(true);
-  };
+  const navigate = useNavigate();
+  const context = useContext(AppContext);
+  const [activeView, setActiveView] = useState("dashboard");
 
   const renderContent = () => {
     switch (activeView) {
@@ -111,10 +109,6 @@ export default function ExpenseTracker() {
         return <DashboardPage />;
     }
   };
-
-  if (!isAuthenticated) {
-    return <LoginScreen onLogin={() => handleLogin()} />;
-  }
 
   return (
     <SidebarProvider>
@@ -236,6 +230,12 @@ export default function ExpenseTracker() {
               ? "Gráfico Comparativo de Presupuesto y Ejecución"
               : "Dashboard"}
           </h1>
+          <button
+            className="ml-auto rounded bg-black px-4 py-1 text-white hover:bg-black/80"
+            onClick={() => {
+              context.LogOut();
+            }}
+          >Salir</button>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4">{renderContent()}</div>
       </SidebarInset>
