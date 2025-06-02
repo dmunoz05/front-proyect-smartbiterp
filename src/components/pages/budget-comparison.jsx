@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
+import AppContext from "@context/app-context";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,25 +17,26 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { Search } from "lucide-react";
+import { toast } from "sonner";
+import axios from "axios";
 
 export default function BudgetComparisonPage() {
+  const context = useContext(AppContext);
+  const urlApi = context.urlApi;
+  const [comparisonData, setComparisonData] = useState([]);
+  const [totalBudgeted, setTotalBudgeted] = useState(0);
+  const [totalNow, setTotalNow,] = useState(0);
+  const [diference, setDifference] = useState(0);
+
   const [dateRange, setDateRange] = useState({
     startDate: "",
     endDate: "",
   });
 
-  // Mock data for budget vs actual comparison
-  const [comparisonData] = useState([
-    { expenseType: "Food & Dining", budgeted: 500, actual: 420 },
-    { expenseType: "Transportation", budgeted: 300, actual: 280 },
-    { expenseType: "Entertainment", budgeted: 200, actual: 250 },
-    { expenseType: "Utilities", budgeted: 400, actual: 380 },
-    { expenseType: "Healthcare", budgeted: 250, actual: 180 },
-  ]);
 
   const chartConfig = {
     budgeted: {
-      label: "Budgeted",
+      label: "Presupuesto",
       color: "hsl(var(--chart-1))",
     },
     actual: {
@@ -43,31 +45,77 @@ export default function BudgetComparisonPage() {
     },
   };
 
-  const getTotalBudgeted = () => {
-    return comparisonData.reduce((sum, item) => sum + item.budgeted, 0);
+  const getTotals = () => {
+    try {
+      axios
+        .get(`${urlApi}/g/total/comparison`)
+        .then((response) => {
+          if (response.status === 200) {
+            setTotalBudgeted(response.data[0].Monto_Presupuesto);
+            setTotalNow(response.data[0].Monto_Deposito);
+            setDifference(
+              response.data[0].Monto_Deposito - response.data[0].Monto_Presupuesto
+            );
+            toast.success("Datos de comparación actualizados con éxito");
+            return "Filtrado con éxito";
+          } else {
+            throw new Error("Error al obtener los datos: " + response.data.message);
+          }
+        }),
+      {
+        loading: "Creando deposito...",
+        success: (msg) => msg,
+        error: (err) => err.message || "Error en la solicitud",
+      }
+    } catch (error) {
+      console.error("Error saving deposit:", error);
+    }
   };
 
-  const getTotalActual = () => {
-    return comparisonData.reduce((sum, item) => sum + item.actual, 0);
-  };
-
-  const getVariance = () => {
-    return getTotalActual() - getTotalBudgeted();
+  const handleFilterComparison = async (e) => {
+    e.preventDefault();
+    try {
+      const filtersDate = {
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      };
+      toast.promise(
+        axios
+          .post(`${urlApi}/g/comparison`, filtersDate)
+          .then((response) => {
+            if (response.status === 200) {
+              getTotals();
+              setComparisonData(response.data);
+              toast.success("Datos de comparación actualizados con éxito");
+              return "Filtrado con éxito";
+            } else {
+              throw new Error("Error al obtener los datos: " + response.data.message);
+            }
+          }),
+        {
+          loading: "Creando deposito...",
+          success: (msg) => msg,
+          error: (err) => err.message || "Error en la solicitud",
+        }
+      );
+    } catch (error) {
+      console.error("Error saving deposit:", error);
+    }
   };
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Budget vs Execution Comparison</CardTitle>
+          <CardTitle>Comparación entre presupuesto y ejecución</CardTitle>
           <CardDescription>
-            Compare budgeted amounts with actual expenses by category
+            Comparar los montos presupuestados con los gastos reales por categoría
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
+              <Label htmlFor="startDate">Fecha de inicio</Label>
               <Input
                 id="startDate"
                 type="date"
@@ -81,7 +129,7 @@ export default function BudgetComparisonPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="endDate">End Date</Label>
+              <Label htmlFor="endDate">Fecha de fin</Label>
               <Input
                 id="endDate"
                 type="date"
@@ -92,141 +140,136 @@ export default function BudgetComparisonPage() {
               />
             </div>
             <div className="flex items-end">
-              <Button>
+              <Button onClick={handleFilterComparison} className="w-full md:w-auto">
                 <Search className="mr-2 h-4 w-4" />
                 Generate Report
               </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Total Budgeted
-                  </p>
-                  <p className="text-2xl font-bold">
-                    ${getTotalBudgeted().toFixed(2)}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Total Actual</p>
-                  <p className="text-2xl font-bold">
-                    ${getTotalActual().toFixed(2)}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Variance</p>
-                  <p
-                    className={`text-2xl font-bold ${
-                      getVariance() >= 0 ? "text-red-600" : "text-green-600"
-                    }`}
-                  >
-                    {getVariance() >= 0 ? "+" : ""}${getVariance().toFixed(2)}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Budget vs Actual Chart</CardTitle>
-              <CardDescription>
-                Visual comparison of budgeted vs actual expenses by category
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="min-h-[400px]">
-                <BarChart
-                  data={comparisonData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="expenseType"
-                    tick={{ fontSize: 12 }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                  />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar
-                    dataKey="budgeted"
-                    fill="var(--color-budgeted)"
-                    name="Budgeted"
-                  />
-                  <Bar
-                    dataKey="actual"
-                    fill="var(--color-actual)"
-                    name="Actual"
-                  />
-                </BarChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Detailed Comparison</CardTitle>
-              <CardDescription>
-                Line-by-line comparison with variance analysis
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {comparisonData.map((item) => {
-                  const variance = item.actual - item.budgeted;
-                  const variancePercent = (
-                    (variance / item.budgeted) *
-                    100
-                  ).toFixed(1);
-
-                  return (
-                    <div
-                      key={item.expenseType}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
-                      <div>
-                        <h4 className="font-medium">{item.expenseType}</h4>
-                        <div className="flex gap-4 text-sm text-muted-foreground">
-                          <span>Budgeted: ${item.budgeted.toFixed(2)}</span>
-                          <span>Actual: ${item.actual.toFixed(2)}</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p
-                          className={`font-medium ${
-                            variance >= 0 ? "text-red-600" : "text-green-600"
-                          }`}
-                        >
-                          {variance >= 0 ? "+" : ""}${variance.toFixed(2)}
-                        </p>
-                        <p
-                          className={`text-sm ${
-                            variance >= 0 ? "text-red-600" : "text-green-600"
-                          }`}
-                        >
-                          {variance >= 0 ? "+" : ""}
-                          {variancePercent}%
-                        </p>
-                      </div>
+          {totalBudgeted != 0 && totalNow != 0 && comparisonData.length > 0 && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Total Presupuestado
+                      </p>
+                      <p className="text-2xl font-bold">
+                        ${totalBudgeted}
+                      </p>
                     </div>
-                  );
-                })}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">Total Actual</p>
+                      <p className="text-2xl font-bold">
+                        ${totalNow}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">Diferencia</p>
+                      <p
+                        className={`text-2xl font-bold ${(diference) >= 0 ? "text-red-600" : "text-green-600"
+                          }`}
+                      >
+                        {diference >= 0 ? "+" : ""}${diference}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Gráfico de presupuesto vs. real</CardTitle>
+                  <CardDescription>
+                    Comparación visual de gastos presupuestados y reales por categoría
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={chartConfig} className="min-h-[400px]">
+                    <BarChart
+                      data={comparisonData}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="TipoGasto"
+                        tick={{ fontSize: 12 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                      />
+                      <YAxis />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar
+                        dataKey="Presupuesto"
+                        fill="var(--color-presupuesto)"
+                        name="Presupuesto"
+                      />
+                      <Bar
+                        dataKey="GastoActual"
+                        fill="var(--color-actual)"
+                        name="GastoActual"
+                      />
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Comparación detallada</CardTitle>
+                  <CardDescription>
+                    Comparación línea por línea con análisis de varianza
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {comparisonData.map((item) => {
+                      return (
+                        <div
+                          key={item.expenseType}
+                          className="flex items-center justify-between p-4 border rounded-lg"
+                        >
+                          <div>
+                            <h4 className="font-medium">{item.TipoGasto}</h4>
+                            <div className="flex gap-4 text-sm text-muted-foreground">
+                              <span>Budgeted: ${item.Presupuesto}</span>
+                              <span>Actual: ${item.GastoActual}</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p
+                              className={`font-medium ${item.Diferencia >= 0 ? "text-red-600" : "text-green-600"
+                                }`}
+                            >
+                              {item.Diferencia >= 0 ? "+" : ""}${item.Diferencia}
+                            </p>
+                            <p
+                              className={`text-sm ${item.Diferencia >= 0 ? "text-red-600" : "text-green-600"
+                                }`}
+                            >
+                              {item.Diferencia >= 0 ? "+" : ""}
+                              {item.Porcentaje}%
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

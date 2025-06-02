@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Save } from "lucide-react";
+import { Save, Trash2 } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
 
@@ -74,6 +74,7 @@ export default function DepositRecordsPage() {
         Fecha: formData.date,
         FondoID: formData.monetaryFund,
         Monto: parseFloat(formData.amount),
+        UsuarioID: context.user.id,
       };
       toast.promise(
         axios
@@ -96,6 +97,29 @@ export default function DepositRecordsPage() {
     } catch (error) {
       console.error("Error saving deposit:", error);
     }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("¿Seguro que quieres eliminar este tipo de gasto?"))
+      return;
+
+    toast.promise(
+      axios
+        .delete(`http://localhost:3000/server/v1/d/deposit-records/${id}`)
+        .then((response) => {
+          if (response.status === 200) {
+            getDeposits();
+            return "Se elimino con éxito";
+          } else {
+            throw new Error("Error al eliminar: " + response.data.message);
+          }
+        }),
+      {
+        loading: "Eliminando datos...",
+        success: (msg) => msg,
+        error: (err) => err.message || "Error en la solicitud",
+      }
+    );
   };
 
   const getTotalDeposits = () => {
@@ -160,7 +184,7 @@ export default function DepositRecordsPage() {
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, amount: e.target.value }))
                   }
-                  placeholder="0.00"
+                  placeholder="0"
                   required
                 />
               </div>
@@ -185,7 +209,7 @@ export default function DepositRecordsPage() {
             <div className="text-right">
               <p className="text-sm text-muted-foreground">Total depositado</p>
               <p className="text-2xl font-bold font-mono text-green-600">
-                ${getTotalDeposits()}
+                ${Intl.NumberFormat("es-CO").format(getTotalDeposits())}
               </p>
             </div>
           </div>
@@ -212,7 +236,21 @@ export default function DepositRecordsPage() {
                       ?.Nombre || `Fondo ${deposit.Nombre}`}
                   </TableCell>
                   <TableCell className="text-right font-mono text-green-600">
-                    +${parseFloat(deposit.Monto)}
+                    +$
+                    {Intl.NumberFormat("es-CO").format(
+                      parseFloat(deposit.Monto)
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(deposit.DepositoID)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
