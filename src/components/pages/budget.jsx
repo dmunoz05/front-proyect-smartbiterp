@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
+import AppContext from "@context/app-context";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -29,6 +30,8 @@ import axios from "axios";
 import { toast } from "sonner";
 
 export default function BudgetPage() {
+  const context = useContext(AppContext);
+  const urlApi = context.urlApi;
   const [expenseTypes, setExpenseTypes] = useState([]);
   const [budgets, setBudgets] = useState([]);
   const [formData, setFormData] = useState({
@@ -60,7 +63,7 @@ export default function BudgetPage() {
   const fetchExpenseTypes = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3000/server/v1/g/expense-types"
+        `${urlApi}/g/expense-types`
       );
       setExpenseTypes(response.data);
     } catch (error) {
@@ -71,7 +74,7 @@ export default function BudgetPage() {
   const fetchBudgets = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3000/server/v1/g/budget"
+        `${urlApi}/g/budget`
       );
       setBudgets(response.data);
     } catch (error) {
@@ -88,7 +91,7 @@ export default function BudgetPage() {
     e.preventDefault();
     toast.promise(
       axios
-        .post("http://localhost:3000/server/v1/i/budget", {
+        .post(`${urlApi}/i/budget`, {
           Mes: parseInt(formData.month),
           TipoGastoID: parseInt(formData.expenseTypeID),
           Monto: parseFloat(formData.amount),
@@ -113,7 +116,7 @@ export default function BudgetPage() {
   const handleDelete = async (id) => {
     toast.promise(
       axios
-        .delete(`http://localhost:3000/server/v1/d/budget/${id}`)
+        .delete(`${urlApi}/d/budget/${id}`)
         .then((response) => {
           if (response.status === 200) {
             fetchBudgets();
