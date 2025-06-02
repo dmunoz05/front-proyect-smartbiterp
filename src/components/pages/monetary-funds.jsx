@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
+import AppContext from "@/context/app-context";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -39,6 +40,8 @@ import axios from "axios";
 import { toast } from "sonner";
 
 export default function MonetaryFundsPage() {
+  const context = useContext(AppContext);
+  const urlApi = context.urlApi;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingFund, setEditingFund] = useState(null);
   const [formData, setFormData] = useState({ name: "", type: "" });
@@ -47,7 +50,7 @@ export default function MonetaryFundsPage() {
   const getFunds = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3000/server/v1/g/monetary-funds"
+        `${urlApi}/g/monetary-funds`
       );
       setFunds(response.data);
     } catch (error) {
@@ -66,7 +69,7 @@ export default function MonetaryFundsPage() {
         toast.promise(
           axios
             .put(
-              `http://localhost:3000/server/v1/u/monetary-funds/${editingFund.FondoID}`,
+              `${urlApi}/u/monetary-funds/${editingFund.FondoID}`,
               {
                 Nombre: formData.name,
                 Tipo: formData.type,
@@ -94,7 +97,7 @@ export default function MonetaryFundsPage() {
       } else {
         toast.promise(
           axios
-            .post("http://localhost:3000/server/v1/i/monetary-funds", {
+            .post(`${urlApi}/i/monetary-funds`, {
               Nombre: formData.name,
               Tipo: formData.type,
             })
@@ -130,7 +133,7 @@ export default function MonetaryFundsPage() {
   const handleDelete = async (id) => {
     toast.promise(
       axios
-        .delete(`http://localhost:3000/server/v1/d/monetary-funds/${id}`)
+        .delete(`${urlApi}/d/monetary-funds/${id}`)
         .then((response) => {
           if (response.status === 200) {
             getFunds();

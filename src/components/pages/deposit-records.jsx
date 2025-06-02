@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
+import AppContext from "@/context/app-context";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -29,6 +30,8 @@ import axios from "axios";
 import { toast } from "sonner";
 
 export default function DepositRecordsPage() {
+  const context = useContext(AppContext);
+  const urlApi = context.urlApi;
   const [formData, setFormData] = useState({
     date: "",
     monetaryFund: "",
@@ -40,7 +43,7 @@ export default function DepositRecordsPage() {
   const getMonetaryFunds = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3000/server/v1/g/monetary-funds"
+        `${urlApi}/g/monetary-funds`
       );
       setMonetaryFunds(response.data);
     } catch (error) {
@@ -51,7 +54,7 @@ export default function DepositRecordsPage() {
   const getDeposits = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3000/server/v1/g/deposit-records"
+        `${urlApi}/g/deposit-records`
       );
       setDeposits(response.data);
     } catch (error) {
@@ -74,7 +77,7 @@ export default function DepositRecordsPage() {
       };
       toast.promise(
         axios
-          .post("http://localhost:3000/server/v1/i/deposit-records", newDeposit)
+          .post(`${urlApi}/i/deposit-records`, newDeposit)
           .then((response) => {
             if (response.status === 201) {
               getDeposits();

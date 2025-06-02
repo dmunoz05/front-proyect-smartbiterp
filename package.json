@@ -13,6 +13,7 @@
     "@clerk/clerk-react": "^5.31.8",
     "axios": "^1.9.0",
     "class-variance-authority": "^0.7.1",
+    "expense-tracker": "file:",
     "lucide-react": "^0.511.0",
     "radix-ui": "^1.4.2",
     "react": "^19.1.0",
