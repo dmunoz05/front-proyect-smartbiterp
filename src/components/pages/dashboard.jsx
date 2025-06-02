@@ -77,7 +77,7 @@ export default function DashboardPage() {
             "Error al obtener los datos: " + response.data.message
           );
         }
-      })
+      });
     } catch (error) {
       console.error("Error:", error);
     }
@@ -179,10 +179,11 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-right">
                     <p
-                      className={`font-medium ${item.TipoTransaccion === "Gasto"
-                        ? "text-red-600"
-                        : "text-green-600"
-                        }`}
+                      className={`font-medium ${
+                        item.TipoTransaccion === "Gasto"
+                          ? "text-red-600"
+                          : "text-green-600"
+                      }`}
                     >
                       {item.TipoTransaccion === "Gasto"
                         ? `-$${Intl.NumberFormat("es-CO").format(item.Monto)}`
@@ -214,29 +215,61 @@ export default function DashboardPage() {
                 <div key={index}>
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">{item.TipoGasto}</span>
-                      {item.Presupuesto > item.GastoActual ? (
-                        <span className="text-sm text-red-600">${item.Presupuesto} / ${item.GastoActual}</span>
-                      ): (
-                        <span className="text-sm">${item.Presupuesto} / ${item.GastoActual}</span>
+                      <span className="text-sm font-medium">
+                        {item.TipoGasto}
+                      </span>
+                      {item.Presupuesto >= item.GastoActual ? (
+                        <span className="text-sm text-green-600">
+                          <span className="text-black">P: </span> $
+                          {Intl.NumberFormat("es-CO").format(item.Presupuesto)}{" "}
+                          / <span className="text-black">G.A: </span> $
+                          {Intl.NumberFormat("es-CO").format(item.GastoActual)}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-red-600">
+                          <span className="text-black">P: </span>$
+                          {Intl.NumberFormat("es-CO").format(item.Presupuesto)}{" "}
+                          / <span className="text-black">G.A: </span>$
+                          {Intl.NumberFormat("es-CO").format(item.GastoActual)}
+                        </span>
                       )}
                     </div>
                     <div className="w-full bg-secondary rounded-full h-2">
-                      {item.Presupuesto > item.GastoActual ? (
+                      {item.Presupuesto === 0 && item.GastoActual === 0 ? (
                         <div
                           className="bg-green-500 h-2 rounded-full"
-                          style={{ width: `${(item.GastoActual / item.Presupuesto) * 100}%` }}
+                          style={{ width: "0%" }}
+                        ></div>
+                      ) : item.Presupuesto >= item.GastoActual ? (
+                        <div
+                          className="bg-green-500 h-2 rounded-full"
+                          style={{
+                            width: `${Math.min(
+                              (item.GastoActual / item.Presupuesto) * 100,
+                              100
+                            )}%`,
+                          }}
                         ></div>
                       ) : (
                         <div
                           className="bg-red-500 h-2 rounded-full"
-                          style={{ width: "100%" }}
+                          style={{
+                            width: `${Math.min(
+                              (item.GastoActual / item.Presupuesto) * 100,
+                              100
+                            )}%`,
+                          }}
                         ></div>
                       )}
                     </div>
                   </div>
                 </div>
               ))}
+            </div>
+            <br />
+            <div className="flex w-full justify-around">
+              <p>P = Presupuesto</p>
+              <p>G.A = Gasto Actual </p>
             </div>
           </CardContent>
         </Card>

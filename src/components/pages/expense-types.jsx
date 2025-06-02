@@ -39,7 +39,6 @@ export default function ExpenseTypesPage() {
   const [formData, setFormData] = useState({ name: "" });
   const [section, setSection] = useState([]);
 
-  // Obtener datos
   const getExpenseTypes = async () => {
     try {
       const response = await axios.get(
