@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
+import AppContext from "@context/app-context";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -31,6 +32,9 @@ import axios from "axios";
 import { toast } from "sonner";
 
 export default function ExpenseRecordsPage() {
+  const context = useContext(AppContext);
+  const urlApi = context.urlApi;
+
   const [currentRecord, setCurrentRecord] = useState({
     date: new Date().toISOString().split("T")[0],
     monetaryFund: "",
@@ -52,9 +56,7 @@ export default function ExpenseRecordsPage() {
 
   const fetchMonetaryFunds = async () => {
     try {
-      const response = await axios.get(
-        "http://localhost:3000/server/v1/g/monetary-funds"
-      );
+      const response = await axios.get(`${urlApi}/g/monetary-funds`);
       setMonetaryFunds(response.data);
     } catch (error) {
       console.error("Error loading monetary funds:", error);
@@ -63,9 +65,7 @@ export default function ExpenseRecordsPage() {
 
   const fetchExpenseTypes = async () => {
     try {
-      const response = await axios.get(
-        "http://localhost:3000/server/v1/g/expense-types"
-      );
+      const response = await axios.get(`${urlApi}/g/expense-types`);
       setExpenseTypes(response.data);
     } catch (error) {
       console.error("Error loading expense types:", error);
@@ -75,15 +75,13 @@ export default function ExpenseRecordsPage() {
   const fetchExpenseRecords = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        "http://localhost:3000/server/v1/g/expense-records"
-      );
+      const response = await axios.get(`${urlApi}/g/expense-records`);
 
       const recordsWithDetails = await Promise.all(
         response.data.map(async (record) => {
           try {
             const detailsResponse = await axios.get(
-              "http://localhost:3000/server/v1/g/expense-records-details"
+              `${urlApi}/g/expense-records-details`
             );
             const recordDetails = detailsResponse.data.filter(
               (detail) => detail.GastoID === record.GastoID
@@ -178,7 +176,7 @@ export default function ExpenseRecordsPage() {
 
     toast.promise(
       axios
-        .post("http://localhost:3000/server/v1/i/expense-records", headerData)
+        .post(`${urlApi}/i/expense-records`, headerData)
         .then(async (response) => {
           if (response.status === 201) {
             const gastoID = response.data.gastoID;
@@ -192,10 +190,7 @@ export default function ExpenseRecordsPage() {
 
               return toast.promise(
                 axios
-                  .post(
-                    "http://localhost:3000/server/v1/i/expense-records-details",
-                    detailData
-                  )
+                  .post(`${urlApi}/i/expense-records-details`, detailData)
                   .then((detailResponse) => {
                     if (detailResponse.status === 201) {
                       return "Detalle creado correctamente";
@@ -250,16 +245,14 @@ export default function ExpenseRecordsPage() {
       return;
 
     toast.promise(
-      axios
-        .delete(`http://localhost:3000/server/v1/d/expense-records/${id}`)
-        .then((response) => {
-          if (response.status === 200) {
-            fetchExpenseRecords();
-            return "Se elimino con éxito";
-          } else {
-            throw new Error("Error al eliminar: " + response.data.message);
-          }
-        }),
+      axios.delete(`${urlApi}/d/expense-records/${id}`).then((response) => {
+        if (response.status === 200) {
+          fetchExpenseRecords();
+          return "Se elimino con éxito";
+        } else {
+          throw new Error("Error al eliminar: " + response.data.message);
+        }
+      }),
       {
         loading: "Eliminando datos...",
         success: (msg) => msg,
@@ -269,10 +262,15 @@ export default function ExpenseRecordsPage() {
   };
 
   useEffect(() => {
-    fetchExpenseRecords();
     fetchMonetaryFunds();
     fetchExpenseTypes();
   }, []);
+
+  useEffect(() => {
+    if (expenseTypes.length > 0) {
+      fetchExpenseRecords();
+    }
+  }, [expenseTypes]);
 
   return (
     <div className="space-y-6">
@@ -519,16 +517,16 @@ export default function ExpenseRecordsPage() {
                         (sum, detail) => sum + detail.amount,
                         0
                       )}
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(record.GastoID)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </p>
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(record.GastoID)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
                   </div>
                   {record.Observaciones && (
                     <p className="text-sm text-muted-foreground mb-2">

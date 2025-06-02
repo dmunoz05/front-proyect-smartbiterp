@@ -25,14 +25,13 @@ export default function BudgetComparisonPage() {
   const urlApi = context.urlApi;
   const [comparisonData, setComparisonData] = useState([]);
   const [totalBudgeted, setTotalBudgeted] = useState(0);
-  const [totalNow, setTotalNow,] = useState(0);
+  const [totalNow, setTotalNow] = useState(0);
   const [diference, setDifference] = useState(0);
 
   const [dateRange, setDateRange] = useState({
     startDate: "",
     endDate: "",
   });
-
 
   const chartConfig = {
     budgeted: {
@@ -47,26 +46,26 @@ export default function BudgetComparisonPage() {
 
   const getTotals = () => {
     try {
-      axios
-        .get(`${urlApi}/g/total/comparison`)
-        .then((response) => {
-          if (response.status === 200) {
-            setTotalBudgeted(response.data[0].Monto_Presupuesto);
-            setTotalNow(response.data[0].Monto_Deposito);
-            setDifference(
-              response.data[0].Monto_Deposito - response.data[0].Monto_Presupuesto
-            );
-            toast.success("Datos de comparación actualizados con éxito");
-            return "Filtrado con éxito";
-          } else {
-            throw new Error("Error al obtener los datos: " + response.data.message);
-          }
-        }),
-      {
-        loading: "Creando deposito...",
-        success: (msg) => msg,
-        error: (err) => err.message || "Error en la solicitud",
-      }
+      axios.get(`${urlApi}/g/total/comparison`).then((response) => {
+        if (response.status === 200) {
+          setTotalBudgeted(response.data[0].Monto_Presupuesto);
+          setTotalNow(response.data[0].Monto_Deposito);
+          setDifference(
+            response.data[0].Monto_Deposito - response.data[0].Monto_Presupuesto
+          );
+          toast.success("Datos de comparación actualizados con éxito");
+          return "Filtrado con éxito";
+        } else {
+          throw new Error(
+            "Error al obtener los datos: " + response.data.message
+          );
+        }
+      }),
+        {
+          loading: "Creando deposito...",
+          success: (msg) => msg,
+          error: (err) => err.message || "Error en la solicitud",
+        };
     } catch (error) {
       console.error("Error saving deposit:", error);
     }
@@ -80,18 +79,18 @@ export default function BudgetComparisonPage() {
         endDate: dateRange.endDate,
       };
       toast.promise(
-        axios
-          .post(`${urlApi}/g/comparison`, filtersDate)
-          .then((response) => {
-            if (response.status === 200) {
-              getTotals();
-              setComparisonData(response.data);
-              toast.success("Datos de comparación actualizados con éxito");
-              return "Filtrado con éxito";
-            } else {
-              throw new Error("Error al obtener los datos: " + response.data.message);
-            }
-          }),
+        axios.post(`${urlApi}/g/comparison`, filtersDate).then((response) => {
+          if (response.status === 200) {
+            getTotals();
+            setComparisonData(response.data);
+            toast.success("Datos de comparación actualizados con éxito");
+            return "Filtrado con éxito";
+          } else {
+            throw new Error(
+              "Error al obtener los datos: " + response.data.message
+            );
+          }
+        }),
         {
           loading: "Creando deposito...",
           success: (msg) => msg,
@@ -109,7 +108,8 @@ export default function BudgetComparisonPage() {
         <CardHeader>
           <CardTitle>Comparación entre presupuesto y ejecución</CardTitle>
           <CardDescription>
-            Comparar los montos presupuestados con los gastos reales por categoría
+            Comparar los montos presupuestados con los gastos reales por
+            categoría
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -140,7 +140,10 @@ export default function BudgetComparisonPage() {
               />
             </div>
             <div className="flex items-end">
-              <Button onClick={handleFilterComparison} className="w-full md:w-auto">
+              <Button
+                onClick={handleFilterComparison}
+                className="w-full md:w-auto"
+              >
                 <Search className="mr-2 h-4 w-4" />
                 Generate Report
               </Button>
@@ -157,7 +160,7 @@ export default function BudgetComparisonPage() {
                         Total Presupuestado
                       </p>
                       <p className="text-2xl font-bold">
-                        ${totalBudgeted}
+                        ${Intl.NumberFormat("es-CO").format(totalBudgeted)}
                       </p>
                     </div>
                   </CardContent>
@@ -165,9 +168,11 @@ export default function BudgetComparisonPage() {
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-center">
-                      <p className="text-sm text-muted-foreground">Total Actual</p>
+                      <p className="text-sm text-muted-foreground">
+                        Total Actual
+                      </p>
                       <p className="text-2xl font-bold">
-                        ${totalNow}
+                        ${Intl.NumberFormat("es-CO").format(totalNow)}
                       </p>
                     </div>
                   </CardContent>
@@ -175,12 +180,16 @@ export default function BudgetComparisonPage() {
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-center">
-                      <p className="text-sm text-muted-foreground">Diferencia</p>
+                      <p className="text-sm text-muted-foreground">
+                        Diferencia
+                      </p>
                       <p
-                        className={`text-2xl font-bold ${(diference) >= 0 ? "text-red-600" : "text-green-600"
-                          }`}
+                        className={`text-2xl font-bold ${
+                          diference >= 0 ? "text-red-600" : "text-green-600"
+                        }`}
                       >
-                        {diference >= 0 ? "+" : ""}${diference}
+                        {diference >= 0 ? "+" : ""}$
+                        {Intl.NumberFormat("es-CO").format(diference)}
                       </p>
                     </div>
                   </CardContent>
@@ -191,11 +200,15 @@ export default function BudgetComparisonPage() {
                 <CardHeader>
                   <CardTitle>Gráfico de presupuesto vs. real</CardTitle>
                   <CardDescription>
-                    Comparación visual de gastos presupuestados y reales por categoría
+                    Comparación visual de gastos presupuestados y reales por
+                    categoría
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={chartConfig} className="min-h-[400px]">
+                  <ChartContainer
+                    config={chartConfig}
+                    className="min-h-[400px]"
+                  >
                     <BarChart
                       data={comparisonData}
                       margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
@@ -243,20 +256,39 @@ export default function BudgetComparisonPage() {
                           <div>
                             <h4 className="font-medium">{item.TipoGasto}</h4>
                             <div className="flex gap-4 text-sm text-muted-foreground">
-                              <span>Budgeted: ${item.Presupuesto}</span>
-                              <span>Actual: ${item.GastoActual}</span>
+                              <span>
+                                Budgeted: $
+                                {Intl.NumberFormat("es-CO").format(
+                                  item.Presupuesto
+                                )}
+                              </span>
+                              <span>
+                                Actual: $
+                                {Intl.NumberFormat("es-CO").format(
+                                  item.GastoActual
+                                )}
+                              </span>
                             </div>
                           </div>
                           <div className="text-right">
                             <p
-                              className={`font-medium ${item.Diferencia >= 0 ? "text-red-600" : "text-green-600"
-                                }`}
+                              className={`font-medium ${
+                                item.Diferencia >= 0
+                                  ? "text-red-600"
+                                  : "text-green-600"
+                              }`}
                             >
-                              {item.Diferencia >= 0 ? "+" : ""}${item.Diferencia}
+                              {item.Diferencia >= 0 ? "+" : ""}$
+                              {Intl.NumberFormat("es-CO").format(
+                                item.Diferencia
+                              )}
                             </p>
                             <p
-                              className={`text-sm ${item.Diferencia >= 0 ? "text-red-600" : "text-green-600"
-                                }`}
+                              className={`text-sm ${
+                                item.Diferencia >= 0
+                                  ? "text-red-600"
+                                  : "text-green-600"
+                              }`}
                             >
                               {item.Diferencia >= 0 ? "+" : ""}
                               {item.Porcentaje}%

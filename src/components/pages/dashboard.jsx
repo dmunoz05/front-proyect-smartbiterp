@@ -6,21 +6,23 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DollarSign, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { useEffect, useState, useContext } from "react";
+import AppContext from "@context/app-context";
 import axios from "axios";
-import { useEffect, useState } from "react";
 
 export default function DashboardPage() {
+  const context = useContext(AppContext);
+  const urlApi = context.urlApi;
   const [moneyTotal, setMoneyTotal] = useState([]);
   const [moneyMonth, setMoneyMonth] = useState([]);
   const [expenseMonth, setExpenseMonth] = useState([]);
   const [budgetTotal, setBudgetTotal] = useState([]);
   const [recentTransactions, setRecentTransactions] = useState([]);
+  const [comparisonData, setComparisonData] = useState([]);
 
   const getMoneyTotal = async () => {
     try {
-      const response = await axios.get(
-        "http://localhost:3000/server/v1/g/dashboard-money-total"
-      );
+      const response = await axios.get(`${urlApi}/g/dashboard-money-total`);
       setMoneyTotal(response.data[0]);
     } catch (error) {
       console.error("Error fetching deposits:", error);
@@ -29,9 +31,7 @@ export default function DashboardPage() {
 
   const getMoneyMonth = async () => {
     try {
-      const response = await axios.get(
-        "http://localhost:3000/server/v1/g/dashboard-money-month"
-      );
+      const response = await axios.get(`${urlApi}/g/dashboard-money-month`);
       setMoneyMonth(response.data[0]);
     } catch (error) {
       console.error("Error fetching deposits:", error);
@@ -40,9 +40,7 @@ export default function DashboardPage() {
 
   const getExpenseMonth = async () => {
     try {
-      const response = await axios.get(
-        "http://localhost:3000/server/v1/g/dashboard-expense-month"
-      );
+      const response = await axios.get(`${urlApi}/g/dashboard-expense-month`);
       setExpenseMonth(response.data[0]);
     } catch (error) {
       console.error("Error fetching deposits:", error);
@@ -51,9 +49,7 @@ export default function DashboardPage() {
 
   const getBudgetTotal = async () => {
     try {
-      const response = await axios.get(
-        "http://localhost:3000/server/v1/g/dashboard-budget-total"
-      );
+      const response = await axios.get(`${urlApi}/g/dashboard-budget-total`);
       setBudgetTotal(response.data[0]);
     } catch (error) {
       console.error("Error fetching deposits:", error);
@@ -63,11 +59,27 @@ export default function DashboardPage() {
   const getRecentTransactions = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3000/server/v1/g/dashboard-recent-transactions"
+        `${urlApi}/g/dashboard-recent-transactions`
       );
       setRecentTransactions(response.data);
     } catch (error) {
       console.error("Error fetching deposits:", error);
+    }
+  };
+
+  const getDashboardComparison = async () => {
+    try {
+      axios.get(`${urlApi}/g/dashboard/comparison/all`).then((response) => {
+        if (response.status === 200) {
+          setComparisonData(response.data);
+        } else {
+          throw new Error(
+            "Error al obtener los datos: " + response.data.message
+          );
+        }
+      })
+    } catch (error) {
+      console.error("Error:", error);
     }
   };
 
@@ -77,6 +89,7 @@ export default function DashboardPage() {
     getExpenseMonth();
     getBudgetTotal();
     getRecentTransactions();
+    getDashboardComparison();
   }, []);
 
   return (
@@ -166,11 +179,10 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-right">
                     <p
-                      className={`font-medium ${
-                        item.TipoTransaccion === "Gasto"
-                          ? "text-red-600"
-                          : "text-green-600"
-                      }`}
+                      className={`font-medium ${item.TipoTransaccion === "Gasto"
+                        ? "text-red-600"
+                        : "text-green-600"
+                        }`}
                     >
                       {item.TipoTransaccion === "Gasto"
                         ? `-$${Intl.NumberFormat("es-CO").format(item.Monto)}`
@@ -183,6 +195,45 @@ export default function DashboardPage() {
                         year: "numeric",
                       })}
                     </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Descripción general del presupuesto</CardTitle>
+            <CardDescription>
+              Estado del presupuesto del mes actual
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {comparisonData.map((item, index) => (
+                <div key={index}>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">{item.TipoGasto}</span>
+                      {item.Presupuesto > item.GastoActual ? (
+                        <span className="text-sm text-red-600">${item.Presupuesto} / ${item.GastoActual}</span>
+                      ): (
+                        <span className="text-sm">${item.Presupuesto} / ${item.GastoActual}</span>
+                      )}
+                    </div>
+                    <div className="w-full bg-secondary rounded-full h-2">
+                      {item.Presupuesto > item.GastoActual ? (
+                        <div
+                          className="bg-green-500 h-2 rounded-full"
+                          style={{ width: `${(item.GastoActual / item.Presupuesto) * 100}%` }}
+                        ></div>
+                      ) : (
+                        <div
+                          className="bg-red-500 h-2 rounded-full"
+                          style={{ width: "100%" }}
+                        ></div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
