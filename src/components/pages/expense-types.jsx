@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
+import AppContext from "@context/app-context";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -31,6 +32,8 @@ import axios from "axios";
 import { toast } from "sonner";
 
 export default function ExpenseTypesPage() {
+  const context = useContext(AppContext);
+  const urlApi = context.urlApi;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState(null);
   const [formData, setFormData] = useState({ name: "" });
@@ -40,7 +43,7 @@ export default function ExpenseTypesPage() {
   const getExpenseTypes = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3000/server/v1/g/expense-types"
+        `${urlApi}/g/expense-types`
       );
       setSection(response.data);
     } catch (error) {
@@ -71,7 +74,7 @@ export default function ExpenseTypesPage() {
         toast.promise(
           axios
             .put(
-              `http://localhost:3000/server/v1/u/expense-types/${editingType.TipoGastoID}`,
+              `${urlApi}/u/expense-types/${editingType.TipoGastoID}`,
               { Nombre: formData.name, Descripcion: "" }
             )
             .then((response) => {
@@ -94,7 +97,7 @@ export default function ExpenseTypesPage() {
       } else {
         toast.promise(
           axios
-            .post("http://localhost:3000/server/v1/i/expense-types", {
+            .post(`${urlApi}/i/expense-types`, {
               Nombre: formData.name,
               Descripcion: "",
             })
@@ -125,7 +128,7 @@ export default function ExpenseTypesPage() {
 
     toast.promise(
       axios
-        .delete(`http://localhost:3000/server/v1/d/expense-types/${id}`)
+        .delete(`${urlApi}/d/expense-types/${id}`)
         .then((response) => {
           if (response.status === 200) {
             getExpenseTypes();
